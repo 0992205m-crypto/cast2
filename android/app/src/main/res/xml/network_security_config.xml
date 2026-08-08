@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Network security config: currently allows cleartext for local network calls (useful for development).
+     IMPORTANT: For production builds set cleartextTrafficPermitted="false" and remove usesCleartextTraffic in the manifest.
+-->
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
