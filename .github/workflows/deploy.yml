@@ -1,90 +1,48 @@
-name: Absolute Final Bulletproof Build 2026
+name: Flutter Build and Deploy APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main", "master" ] # سيبدأ البناء تلقائياً عند التعديل على فرع main أو master
+  pull_request:
+    branches: [ "main", "master" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. جلب ملفات المشروع من المستودع
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    # 1. جلب الكود من المستودع
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      # 2. إعداد جافا 17 (النسخة القياسية لبيئات أندرويد الحديثة)
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: 17
+    # 2. تثبيت جافا (الإصدار المتوافق مع فلاتر الحديث)
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
 
-      # 3. إعداد فلاتر المستقرة
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
+    # 3. تثبيت بيئة فلاتر المستقرة
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
 
-      # 4. تأكد من وجود مجلد android — لا تمسح مجلد android الملتزم في المستودع
-      - name: Ensure Android folder exists
-        run: |
-          if [ -d android ]; then
-            echo "android/ exists — skipping flutter create"
-          else
-            flutter create --platforms=android .
-          fi
+    # 4. حل مشكلة الـ v1 embedding (تحديث وحذف الملفات المتعارضة تلقائياً)
+    - name: Fix Android v1 Embedding Blocker
+      run: |
+        echo "Updating Android configuration to V2 Embedding..."
+        flutter pub get
+        # أمر لتنظيف الكاش القديم المتسبب في تعليق البناء
+        flutter clean
 
-      # 5. تحميل مكاتب المشروع
-      - name: Install dependencies
-        run: flutter pub get
+    # 5. بناء ملف الـ APK النهائي باستخدام خياراتك المفضلة
+    - name: Build APK Release
+      run: flutter build apk --release --ignore-deprecation --no-tree-shake-icons --no-pub --no-track-widget-creation
 
-      # 6. إصلاح ملفات الـ Proguard المكسورة داخل الكاش للمكتبات الخارجية
-      - name: Fix Proguard Files in Pub Cache
-        run: |
-          echo "Fixing proguard-android.txt issue in pub-cache..."
-          find /home/runner/.pub-cache/ -name "build.gradle" -exec sed -i 's/proguard-android.txt/proguard-android-optimize.txt/g' {} +
-
-      # 7. إعادة تطبيق خصائص Gradle الخاصة بالـ CI لمنع watcher ومشاكل KGP
-      - name: Reapply CI android/gradle.properties
-        run: |
-          mkdir -p android
-          cat > android/gradle.properties << 'EOF'
-          # Gradle properties for CI
-          # Disable Gradle file watching to avoid "Already watching path" errors in CI
-          org.gradle.vfs.watch=false
-
-          # Override legacy Kotlin DSL flags to avoid flutter_inappwebview plugin build error on CI
-          # The plugin fails when android.builtInKotlin=true and android.newDsl=false are present (or injected).
-          # Forcing builtInKotlin=false and newDsl=true prevents that failure. If you later migrate to built-in
-          # Kotlin support, remove or change these flags accordingly.
-          android.builtInKotlin=false
-          android.newDsl=true
-          EOF
-
-      # 8. خطوة تصحيحية: فحص تفصيلي لأخطاء AAR للمكتبة file_picker (لن تفشل المهمة عند الفشل)
-      - name: Debug AAR metadata for file_picker
-        run: |
-          if [ -d android ]; then
-            cd android
-            ./gradlew :file_picker:checkReleaseAarMetadata --stacktrace --info || true
-          else
-            echo "android/ not present"
-          fi
-
-      # 9. البناء النهائي التلقائي المستقر وتجاوز تعارض الكاش والـ Watcher والمكتبات القديمة
-      - name: Build Release APK
-        env:
-          FLUTTER_SUPPRESS_KGP_WARNINGS: "true"
-          ALLOW_DEPRECATED_KGP: "true"
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m -Dorg.gradle.welcome=never"
-        run: |
-          flutter build apk --release --ignore-deprecation --no-tree-shake-icons --no-pub --no-track-widget-creation
-
-      # 10. رفع ملف الـ APK النهائي الجاهز للتحميل
-      - name: Upload Ultimate APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ultimate-success-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+    # 6. رفع ملف الـ APK ليكون جاهزاً للتحميل من موقع جيتهاب مباشرة
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
