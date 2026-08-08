@@ -1,0 +1,21 @@
+# Flutter / Android build artifacts
+/build/
+**/build/
+.android/
+.flutter-plugins
+.packages
+.pub-cache/
+.flutter-plugins-dependencies
+
+# Local key / keystore
+/android/keystores/
+/android/key.properties
+*.jks
+
+# Gradle
+/.gradle/
+/**/.gradle/
+
+# IDE
+/.idea/
+/*.iml
