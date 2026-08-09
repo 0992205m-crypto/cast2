@@ -198,11 +198,11 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
+  // تم استبدال الكود بـ JavaScript قياسي نقي وبدون دمج معقد أو علامات مسببة للمشاكل في المترجم
   void _injectSmartMediaSniffer() async {
     if (_webViewController == null) return;
-    final String jsCode = "var origOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(method,url){if(url&&(url.indexOf('.mp4')!==-1||url.indexOf('.m3u8')!==-1||url.indexOf('.mpd')!==-1||url.indexOf('videoplayback')!==-1)){window.flutter_inappwebview.callHandler('mediaSnifferHandler',url);}return origOpen.apply(this,arguments);};function scanTags(){var vids=document.getElementsByTagName('video');for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',vids[i].src);var sources=vids[i].getElementsByTagName('source');for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',sources[j].src);}}}setInterval(scanTags,2000);scanTags();";
     try {
-      await _webViewController!.evaluateJavascript(source: jsCode);
+      await _webViewController!.evaluateJavascript(source: "function scanTags(){var vids=document.getElementsByTagName('video');for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',vids[i].src);var sources=vids[i].getElementsByTagName('source');for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',sources[j].src);}}}setInterval(scanTags,2000);scanTags();");
     } catch (_) {}
   }
 
@@ -269,5 +269,11 @@ class _MainDashboardState extends State<MainDashboard> {
           color: const Color(0xFF1E293B),
           child: ListTile(
             leading: const Icon(Icons.video_file, color: Colors.amber),
-            title: Text('فيديو مكتشف رقم ${index + 1}'),
+            title: Text('فيديو مكتشف رقم ' + (index + 1).toString()),
             subtitle: Text(list[index], maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.play_arrow, color: Colors.green),
+                  onPressed: () => _playVideoInternally(list[index]),
