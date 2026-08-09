@@ -1,16 +1,26 @@
 <manifest xmlns:android="http://android.com"
-    package="com.example.cast2"> <!-- استبدل اسم الحزمة باسم حزمتك إذا كان مختلفاً -->
+    package="com.example.cast2">
 
-    <!-- تصاريح الإنترنت الأساسية وتصاريح شبكة الواي فاي المحلية للبث -->
+    <!-- تصاريح الإنترنت والشبكة لفتح المواقع وفك حظر الروابط -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    
+    <!-- حل مشكلة البحث الوهمي وإيقاف خمول الواي فاي أثناء البحث عن الشاشات -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+
+    <!-- تصاريح البحث عن الأجهزة القريبة والبث المتوافقة مع أندرويد الحديث -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:label="cast2"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"> <!-- هذا السطر يحل مشكلة توقف الإنترنت للمواقع غير المشفرة -->
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"> <!-- هذا السطر يربط ملف الأمان ويحل مشكلة توقف الإنترنت نهائياً -->
         
         <activity
             android:name=".MainActivity"
