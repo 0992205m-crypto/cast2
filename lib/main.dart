@@ -124,7 +124,8 @@ class _MainDashboardState extends State<MainDashboard> {
         final ipStr = interfaces.first.addresses.first.address;
         final ipParts = ipStr.split('.');
         if (ipParts.length == 4) {
-          baseIp = ipParts[0] + '.' + ipParts[1] + '.' + ipParts[2];
+          // تم التصحيح الجذري هنا بالاعتماد على الفهارس النصية السليمة لـ Dart
+          baseIp = "${ipParts[0]}.${ipParts[1]}.${ipParts[2]}";
         }
       }
     } catch (_) {}
@@ -198,7 +199,6 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
-  // تم استبدال الكود بـ JavaScript قياسي نقي وبدون دمج معقد أو علامات مسببة للمشاكل في المترجم
   void _injectSmartMediaSniffer() async {
     if (_webViewController == null) return;
     try {
@@ -277,3 +277,4 @@ class _MainDashboardState extends State<MainDashboard> {
                 IconButton(
                   icon: const Icon(Icons.play_arrow, color: Colors.green),
                   onPressed: () => _playVideoInternally(list[index]),
+                ),
