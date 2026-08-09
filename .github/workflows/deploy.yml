@@ -28,14 +28,48 @@ jobs:
       with:
         channel: 'stable'
 
-    # 4. إعادة بناء ملفات الـ Android الأساسية بالكامل لإجبار السيرفر على استخدام V2
-    - name: Reconstruct Android Manifest and Main Activity to V2
+    # 4. إعادة بناء وإصلاح ملفات الأندرويد الأساسية (المانيفست، الاكتيفيتي، وإعدادات جرادل)
+    - name: Reconstruct Android Configurations to Modern V2
       run: |
         echo "Cleaning old cache..."
         flutter clean
 
+        echo "Overwriting settings.gradle with Clean Modern Code..."
+        # إعادة إنشاء ملف الإعدادات القياسي الحديث متوافق مع إصدارات فلاتر الجديدة
+        cat << 'EOF' > android/settings.gradle
+        pluginManagement {
+            def flutterSdkPath = {
+                def properties = new Properties()
+                def propertiesFile = new File(settingsDir, "local.properties")
+                if (propertiesFile.exists()) {
+                    propertiesFile.withReader("UTF-8") { reader -> properties.load(reader) }
+                }
+                def sdkPath = properties.getProperty("flutter.sdk")
+                if (sdkPath == null) {
+                    throw new GradleException("flutter.sdk not set in local.properties")
+                }
+                return sdkPath
+            }()
+
+            includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
+
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+
+        plugins {
+            id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+            id "com.android.application" version "8.1.0" apply false
+            id "org.jetbrains.kotlin.android" version "1.8.22" apply false
+        }
+
+        include ":app"
+        EOF
+
         echo "Overwriting AndroidManifest.xml with Clean V2 Code..."
-        # إعادة كتابة ملف المانيفست القياسي بالكامل لمنع أي تضارب مع الهيكلية القديمة
         cat << 'EOF' > android/app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://android.com"
             package="com.example.cast2">
@@ -68,11 +102,9 @@ jobs:
         EOF
 
         echo "Overwriting MainActivity with Clean V2 Kotlin Code..."
-        # التأكد من إزالة أي مجلدات أو ملفات قديمة مسببة للمشكلة
         rm -rf android/app/src/main/java/com/example/* || true
         rm -rf android/app/src/main/kotlin/com/example/* || true
         
-        # إنشاء مسار نظيف وتوليد ملف MainActivity الحديث المتوافق 100% مع V2
         mkdir -p android/app/src/main/kotlin/com/example/cast2
         cat << 'EOF' > android/app/src/main/kotlin/com/example/cast2/MainActivity.kt
         package com.example.cast2
@@ -88,7 +120,7 @@ jobs:
     - name: Build APK Release
       run: flutter build apk --release --ignore-deprecation --no-tree-shake-icons --no-track-widget-creation
 
-    # 6. رفع ملف الـ APK النهائي ليكون جاهزاً للتحميل من صفحة جيتهاب
+    # 6. رفع ملف الـ APK النهائي للتحميل
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
