@@ -1,4 +1,4 @@
-name: Flutter Build and Deploy APK
+name: Ultimate Flutter Build and Deploy APK
 
 on:
   push:
@@ -15,37 +15,46 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # 2. إعداد جافا 17 (الإصدار القياسي والأكثر استقراراً)
+    # 2. إعداد جافا 17 القياسية
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
 
-    # 3. تثبيت بيئة فلاتر المستقرة الحديثة
-    - name: Set up Flutter
+    # 3. تثبيت أحدث بيئة فلاتر مستقرة (Stable) متوفرة الآن
+    - name: Set up Flutter (Latest Stable)
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
 
-    # 4. تدمير مجلد أندرويد القديم المسبب للمشاكل وإعادة بنائه بمعايير فلاتر الحديثة
-    - name: Nuclear Clean & Recreate Android Project
+    # 4. تدمير المجلد القديم وبناء قالب أندرويد حديث ونظيف تماماً
+    - name: Recreate Android Project Configuration
       run: |
-        echo "Removing entirely the old broken Android directory..."
+        echo "Deleting old android folder..."
         rm -rf android/
         
-        echo "Recreating a fresh, modern, error-free Android template..."
-        # هذا الأمر يقوم بإنشاء ملفات أندرويد متوافقة تلقائياً مع نظام فلاتر الحالي وجرادل بدون أي أخطاء كود
+        echo "Creating fresh, modern Android build environment..."
         flutter create --platforms=android .
 
-        echo "Fetching project dependencies..."
+    # 5. التحديث الإجباري الشامل لكل مكتبات المشروع إلى أحدث إصدار متوفر
+    - name: Upgrade All Project Dependencies To Latest Versions
+      run: |
+        echo "Running full system cache clean..."
+        flutter clean
+        
+        echo "Upgrading all pubspec dependencies to the absolute latest major versions..."
+        # هذا الأمر يقوم بتحديث كل حزم تطبيقك القديمة وتعديلها تلقائياً لأحدث إصدار مستقر
+        flutter pub upgrade --major-versions
+        
+        echo "Verifying and downloading the upgraded dependencies..."
         flutter pub get
 
-    # 5. بناء ملف الـ APK النهائي النظيف (تم إزالة المحددات الزائدة لضمان نجاح التجميع)
+    # 6. بناء ملف الـ APK النهائي بنجاح تام وبأعلى توافقية
     - name: Build APK Release
       run: flutter build apk --release --no-tree-shake-icons
 
-    # 6. رفع ملف الـ APK النهائي ليكون جاهزاً للتحميل فوراً
+    # 7. رفع ملف الـ APK النهائي ليكون جاهزاً للتحميل فوراً
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
