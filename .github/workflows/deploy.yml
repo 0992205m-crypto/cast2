@@ -15,112 +15,37 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # 2. إعداد جافا 17
+    # 2. إعداد جافا 17 (الإصدار القياسي والأكثر استقراراً)
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
 
-    # 3. تثبيت بيئة فلاتر المستقرة
+    # 3. تثبيت بيئة فلاتر المستقرة الحديثة
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
 
-    # 4. إعادة بناء وإصلاح ملفات الأندرويد الأساسية (المانيفست، الاكتيفيتي، وإعدادات جرادل)
-    - name: Reconstruct Android Configurations to Modern V2
+    # 4. تدمير مجلد أندرويد القديم المسبب للمشاكل وإعادة بنائه بمعايير فلاتر الحديثة
+    - name: Nuclear Clean & Recreate Android Project
       run: |
-        echo "Cleaning old cache..."
-        flutter clean
-
-        echo "Overwriting settings.gradle with Clean Modern Code..."
-        # إعادة إنشاء ملف الإعدادات القياسي الحديث متوافق مع إصدارات فلاتر الجديدة
-        cat << 'EOF' > android/settings.gradle
-        pluginManagement {
-            def flutterSdkPath = {
-                def properties = new Properties()
-                def propertiesFile = new File(settingsDir, "local.properties")
-                if (propertiesFile.exists()) {
-                    propertiesFile.withReader("UTF-8") { reader -> properties.load(reader) }
-                }
-                def sdkPath = properties.getProperty("flutter.sdk")
-                if (sdkPath == null) {
-                    throw new GradleException("flutter.sdk not set in local.properties")
-                }
-                return sdkPath
-            }()
-
-            includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
-
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-
-        plugins {
-            id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-            id "com.android.application" version "8.1.0" apply false
-            id "org.jetbrains.kotlin.android" version "1.8.22" apply false
-        }
-
-        include ":app"
-        EOF
-
-        echo "Overwriting AndroidManifest.xml with Clean V2 Code..."
-        cat << 'EOF' > android/app/src/main/AndroidManifest.xml
-        <manifest xmlns:android="http://android.com"
-            package="com.example.cast2">
-            <application
-                android:label="cast2"
-                android:name="${applicationName}"
-                android:icon="@mipmap/ic_launcher">
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true"
-                    android:launchMode="singleTop"
-                    android:taskAffinity=""
-                    android:theme="@style/LaunchTheme"
-                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                    android:hardwareAccelerated="true"
-                    android:windowSoftInputMode="adjustResize">
-                    <meta-data
-                      android:name="io.flutter.embedding.android.NormalTheme"
-                      android:resource="@style/NormalTheme" />
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                    </intent-filter>
-                </activity>
-                <meta-data
-                    android:name="flutterEmbedding"
-                    android:value="2" />
-            </application>
-        </manifest>
-        EOF
-
-        echo "Overwriting MainActivity with Clean V2 Kotlin Code..."
-        rm -rf android/app/src/main/java/com/example/* || true
-        rm -rf android/app/src/main/kotlin/com/example/* || true
+        echo "Removing entirely the old broken Android directory..."
+        rm -rf android/
         
-        mkdir -p android/app/src/main/kotlin/com/example/cast2
-        cat << 'EOF' > android/app/src/main/kotlin/com/example/cast2/MainActivity.kt
-        package com.example.cast2
-        import io.flutter.embedding.android.FlutterActivity
-        class MainActivity: FlutterActivity() {
-        }
-        EOF
+        echo "Recreating a fresh, modern, error-free Android template..."
+        # هذا الأمر يقوم بإنشاء ملفات أندرويد متوافقة تلقائياً مع نظام فلاتر الحالي وجرادل بدون أي أخطاء كود
+        flutter create --platforms=android .
 
-        echo "Fetching modern dependencies..."
+        echo "Fetching project dependencies..."
         flutter pub get
 
-    # 5. بناء ملف الـ APK النهائي بنجاح
+    # 5. بناء ملف الـ APK النهائي النظيف (تم إزالة المحددات الزائدة لضمان نجاح التجميع)
     - name: Build APK Release
-      run: flutter build apk --release --ignore-deprecation --no-tree-shake-icons --no-track-widget-creation
+      run: flutter build apk --release --no-tree-shake-icons
 
-    # 6. رفع ملف الـ APK النهائي للتحميل
+    # 6. رفع ملف الـ APK النهائي ليكون جاهزاً للتحميل فوراً
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
