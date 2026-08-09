@@ -1,12 +1,57 @@
-// إجبار المشروع وكل الحزم (بما فيها file_picker) على البناء باستخدام إصدار 36
+// الملف: android/build.gradle
+
+buildscript {
+    ext.kotlin_version =  1.9.20  // أو الإصدار المتوافق مع مشروعك
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        // إذا كان مشروعك يستخدم نظام المكونات الإضافية القديم
+        classpath  com.android.tools.build:gradle:8.2.1 
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir =  ../build 
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn( :app )
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+// ====================================================================
+// الكود الإجباري لتخطي خطأ الـ compileSdk 36 على الهاتف تلقائياً
+// ====================================================================
 subprojects {
     afterEvaluate { project ->
-        if (project.hasProperty("android")) {
+        if (project.hasProperty( android )) {
             project.android {
-                compileSdkVersion 36
+                compileSdk = 36
                 
-                // تأمين توافق إصدارات أدوات البناء
-                buildToolsVersion "36.0.0"
+                if (project.android.hasProperty( compileSdkVersion )) {
+                    compileSdkVersion = 36
+                }
+                
+                // إجبار المكونات الإضافية على التوافق مع أدوات البناء الحديثة
+                defaultConfig {
+                    if (project.android.defaultConfig.hasProperty( targetSdkVersion )) {
+                        targetSdkVersion = 36
+                    }
+                }
             }
         }
     }
