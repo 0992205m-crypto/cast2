@@ -1,11 +1,11 @@
-import  package:flutter/material.dart ;
-import  package:flutter_inappwebview/flutter_inappwebview.dart ;
-import  package:file_picker/file_picker.dart ;
-import  package:video_player/video_player.dart ;
-import  package:chewie/chewie.dart ;
-import  package:http/http.dart  as http;
-import  dart:io ;
-import  dart:convert ;
+import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'dart:convert';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +19,7 @@ class UltimateCastApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title:  كاست ماستر برو ,
+      title: 'كاست ماستر برو',
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0F172A),
       ),
@@ -82,7 +82,7 @@ class _MainDashboardState extends State<MainDashboard> {
 
   void _castToReceiverDLNA(String videoUrl, String ip, String port) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text( جاري إرسال الفيديو للريسيفر... 📺 )),
+      SnackBar(content: Text('جاري إرسال الفيديو للريسيفر... 📺')),
     );
   }
 
@@ -94,11 +94,11 @@ class _MainDashboardState extends State<MainDashboard> {
       String deviceName = "جهاز ذكي مجهول";
       
       try {
-        final pathsToTry = [ /ssdp/device-desc.xml ,  /description.xml ,  /device.xml ,  /setup/xml ];
+        final pathsToTry = ['/ssdp/device-desc.xml', '/description.xml', '/device.xml', '/setup/xml'];
         for (var path in pathsToTry) {
-          final response = await http.get(Uri.parse( http://$ip:$port$path )).timeout(const Duration(milliseconds: 400));
-          if (response.statusCode == 200 && response.body.contains( <friendlyName> )) {
-            final match = RegExp(r <friendlyName>(.*?)</friendlyName> ).firstMatch(response.body);
+          final response = await http.get(Uri.parse('http://$ip:$port$path')).timeout(const Duration(milliseconds: 400));
+          if (response.statusCode == 200 && response.body.contains('<friendlyName>')) {
+            final match = RegExp(r'<friendlyName>(.*?)</friendlyName>').firstMatch(response.body);
             if (match != null && match.group(1) != null) {
               deviceName = match.group(1)!;
               break;
@@ -107,10 +107,10 @@ class _MainDashboardState extends State<MainDashboard> {
         }
         
         if (deviceName == "جهاز ذكي مجهول" && port == 8008) {
-          final response = await http.get(Uri.parse( http://$ip:$port/setup/eureka_info )).timeout(const Duration(milliseconds: 400));
+          final response = await http.get(Uri.parse('http://$ip:$port/setup/eureka_info')).timeout(const Duration(milliseconds: 400));
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
-            if (data[ name ] != null) deviceName = data[ name ];
+            if (data['name'] != null) deviceName = data['name'];
           }
         }
       } catch (_) {
@@ -121,12 +121,12 @@ class _MainDashboardState extends State<MainDashboard> {
 
       if (mounted) {
         setState(() {
-          bool alreadyExists = _discoveredDevices.any((d) => d[ ip ] == ip && d[ port ] == port.toString());
+          bool alreadyExists = _discoveredDevices.any((d) => d['ip'] == ip && d['port'] == port.toString());
           if (!alreadyExists) {
             _discoveredDevices.add({
-               name : deviceName,
-               ip : ip,
-               port : port.toString(),
+              'name': deviceName,
+              'ip': ip,
+              'port': port.toString(),
             });
           }
         });
@@ -145,7 +145,7 @@ class _MainDashboardState extends State<MainDashboard> {
     try {
       final interfaces = await NetworkInterface.list(includeLoopback: false, type: InternetAddressType.IPv4);
       if (interfaces.isNotEmpty && interfaces.first.addresses.isNotEmpty) {
-        final ipParts = interfaces.first.addresses.first.address.split( . );
+        final ipParts = interfaces.first.addresses.first.address.split('.');
         if (ipParts.length == 4) {
           baseIp = "${ipParts[0]}.${ipParts[1]}.${ipParts[2]}";
         }
@@ -200,15 +200,15 @@ class _MainDashboardState extends State<MainDashboard> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: ListTile(
                         leading: const Icon(Icons.connected_tv, color: Colors.amber, size: 30),
-                        title: Text(device[ name ]!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                        subtitle: Text("IP: ${device[ ip ]} | Port: ${device[ port ]}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        title: Text(device['name']!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                        subtitle: Text("IP: ${device['ip']} | Port: ${device['port']}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                         onTap: () {
                           Navigator.pop(context);
                           if (_detectedVideos.isNotEmpty) {
-                            _castToReceiverDLNA(_detectedVideos.first, device[ ip ]!, device[ port ]!);
+                            _castToReceiverDLNA(_detectedVideos.first, device['ip']!, device['port']!);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text( قم بتشغيل فيديو أولاً ليتم إرساله للشاشة )),
+                              const SnackBar(content: Text('قم بتشغيل فيديو أولاً ليتم إرساله للشاشة')),
                             );
                           }
                         },
@@ -221,32 +221,11 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
+  // تم ضغط الكود هنا بالكامل في سطر واحد نقي لمنع مشاكل الأسطر المتعددة في المترجم
   void _injectSmartMediaSniffer() async {
     if (_webViewController == null) return;
     try {
-      await _webViewController!.evaluateJavascript(source: """
-        (function() {
-          var origOpen = XMLHttpRequest.prototype.open;
-          XMLHttpRequest.prototype.open = function(method, url) {
-            if (url && (url.indexOf( .mp4 ) !== -1 || url.indexOf( .m3u8 ) !== -1 || url.indexOf( .mpd ) !== -1 || url.indexOf( videoplayback ) !== -1)) {
-              window.flutter_inappwebview.callHandler( mediaSnifferHandler , url);
-            }
-            return origOpen.apply(this, arguments);
-          };
-          function scanTags() {
-            var vids = document.getElementsByTagName( video );
-            for (var i = 0; i < vids.length; i++) {
-              if (vids[i].src) window.flutter_inappwebview.callHandler( mediaSnifferHandler , vids[i].src);
-              var sources = vids[i].getElementsByTagName( source );
-              for (var j = 0; j < sources.length; j++) {
-                if (sources[j].src) window.flutter_inappwebview.callHandler( mediaSnifferHandler , sources[j].src);
-              }
-            }
-          }
-          setInterval(scanTags, 2000);
-          scanTags();
-        })();
-      """);
+      await _webViewController!.evaluateJavascript(source: "var origOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(method,url){if(url&&(url.indexOf('.mp4')!==-1||url.indexOf('.m3u8')!==-1||url.indexOf('.mpd')!==-1||url.indexOf('videoplayback')!==-1)){window.flutter_inappwebview.callHandler('mediaSnifferHandler',url);}return origOpen.apply(this,arguments);};function scanTags(){var vids=document.getElementsByTagName('video');for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',vids[i].src);var sources=vids[i].getElementsByTagName('source');for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',sources[j].src);}}}setInterval(scanTags,2000);scanTags();");
     } catch (_) {}
   }
 
@@ -258,7 +237,7 @@ class _MainDashboardState extends State<MainDashboard> {
           color: const Color(0xFF1E293B),
           child: TextField(
             decoration: const InputDecoration(
-              hintText:  أدخل رابط أو ابحث... ,
+              hintText: 'أدخل رابط أو ابحث...',
               prefixIcon: Icon(Icons.search),
               border: InputBorder.none,
             ),
@@ -275,3 +254,7 @@ class _MainDashboardState extends State<MainDashboard> {
           child: InAppWebView(
             initialUrlRequest: URLRequest(url: WebUri(_currentUrl)),
             onWebViewCreated: (controller) {
+              _webViewController = controller;
+              _webViewController!.addJavaScriptHandler(handlerName: 'mediaSnifferHandler', callback: (args) {
+                if (args.isNotEmpty) {
+                  String rawUrl = args.first.toString();
