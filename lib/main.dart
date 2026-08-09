@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
-import 'package:http/http.dart' as http;
-import 'dart:io';
-import 'dart:convert';
+import  package:flutter/material.dart ;
+import  package:flutter_inappwebview/flutter_inappwebview.dart ;
+import  package:file_picker/file_picker.dart ;
+import  package:video_player/video_player.dart ;
+import  package:chewie/chewie.dart ;
+import  package:http/http.dart  as http;
+import  dart:io ;
+import  dart:convert ;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +19,7 @@ class UltimateCastApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'كاست ماستر برو',
+      title:  كاست ماستر برو ,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0F172A),
       ),
@@ -45,8 +45,7 @@ class _MainDashboardState extends State<MainDashboard> {
   ChewieController? _chewieController;
   bool _isPlayerInitialized = false;
 
-  // مصفوفة لتخزين الأجهزة المكتشفة كأجسام تحتوي على الاسم، الآي بي، والبورت
-  List<Map<String, String>> _discoveredDevices = [];
+  final List<Map<String, String>> _discoveredDevices = [];
   bool _isScanning = false;
 
   @override
@@ -83,27 +82,23 @@ class _MainDashboardState extends State<MainDashboard> {
 
   void _castToReceiverDLNA(String videoUrl, String ip, String port) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('جاري إرسال الفيديو إلى الجهاز المستهدف عِبر [$ip:$port] 📺')),
+      SnackBar(content: Text( جاري إرسال الفيديو للريسيفر... 📺 )),
     );
   }
 
-  // محرك الفحص الأوتوماتيكي الذكي لجلب البيانات الوصفية والاسم الحقيقي للجهاز عِبر الـ IP والبورت
   Future<void> _autoDiscoverDeviceDetails(String ip, int port) async {
     try {
-      // الاتصال الأولي بالـ Socket للتأكد من استجابة المنفذ
       final socket = await Socket.connect(ip, port, timeout: const Duration(milliseconds: 200));
       socket.destroy();
 
       String deviceName = "جهاز ذكي مجهول";
       
-      // محاولة أوتوماتيكية لقراءة ملفات التعريف (XML/JSON) الخاصة ببروتوكولات UPnP/DLNA/Chromecast
       try {
-        final pathsToTry = ['/ssdp/device-desc.xml', '/description.xml', '/device.xml', '/setup/xml'];
+        final pathsToTry = [ /ssdp/device-desc.xml ,  /description.xml ,  /device.xml ,  /setup/xml ];
         for (var path in pathsToTry) {
-          final response = await http.get(Uri.parse('http://$ip:$port$path')).timeout(const Duration(milliseconds: 400));
-          if (response.statusCode == 200 && response.body.contains('<friendlyName>')) {
-            // استخراج الاسم الحقيقي للجهاز من ملف الـ XML التابع للشاشة أو الريسيفر
-            final match = RegExp(r'<friendlyName>(.*?)</friendlyName>').firstMatch(response.body);
+          final response = await http.get(Uri.parse( http://$ip:$port$path )).timeout(const Duration(milliseconds: 400));
+          if (response.statusCode == 200 && response.body.contains( <friendlyName> )) {
+            final match = RegExp(r <friendlyName>(.*?)</friendlyName> ).firstMatch(response.body);
             if (match != null && match.group(1) != null) {
               deviceName = match.group(1)!;
               break;
@@ -111,16 +106,14 @@ class _MainDashboardState extends State<MainDashboard> {
           }
         }
         
-        // محاولة إضافية لأجهزة الكروم كاست وأندرويد تي في التي تبث عبر منافذ الـ JSON
         if (deviceName == "جهاز ذكي مجهول" && port == 8008) {
-          final response = await http.get(Uri.parse('http://$ip:$port/setup/eureka_info')).timeout(const Duration(milliseconds: 400));
+          final response = await http.get(Uri.parse( http://$ip:$port/setup/eureka_info )).timeout(const Duration(milliseconds: 400));
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
-            if (data['name'] != null) deviceName = data['name'];
+            if (data[ name ] != null) deviceName = data[ name ];
           }
         }
       } catch (_) {
-        // تصنيف افتراضي ذكي بحسب رقم المنفذ المستجيب في حال تعذر جلب الاسم النصي
         if (port == 23232) deviceName = "ريسيفر DLNA القياسي";
         if (port == 8008) deviceName = "جهاز Chromecast / Android TV";
         if (port == 8080 || port == 49152) deviceName = "شاشة ذكية UPnP";
@@ -128,13 +121,12 @@ class _MainDashboardState extends State<MainDashboard> {
 
       if (mounted) {
         setState(() {
-          // منع تكرار نفس الجهاز في القائمة
-          bool alreadyExists = _discoveredDevices.any((d) => d['ip'] == ip && d['port'] == port.toString());
+          bool alreadyExists = _discoveredDevices.any((d) => d[ ip ] == ip && d[ port ] == port.toString());
           if (!alreadyExists) {
             _discoveredDevices.add({
-              'name': deviceName,
-              'ip': ip,
-              'port': port.toString(),
+               name : deviceName,
+               ip : ip,
+               port : port.toString(),
             });
           }
         });
@@ -142,7 +134,6 @@ class _MainDashboardState extends State<MainDashboard> {
     } catch (_) {}
   }
 
-  // دالة المسح الشامل المتوازي لجميع المنافذ المحتملة لأجهزة البث في الشبكة المحلية
   void _scanLocalNetworkForReceivers() async {
     setState(() {
       _isScanning = true;
@@ -152,26 +143,23 @@ class _MainDashboardState extends State<MainDashboard> {
     String baseIp = "192.168.1";
 
     try {
-      // كشف الآي بي الفرعي الفعلي للشبكة الحالية المتصل بها الهاتف أوتوماتيكيًا
       final interfaces = await NetworkInterface.list(includeLoopback: false, type: InternetAddressType.IPv4);
       if (interfaces.isNotEmpty && interfaces.first.addresses.isNotEmpty) {
-        final ipParts = interfaces.first.addresses.first.address.split('.');
+        final ipParts = interfaces.first.addresses.first.address.split( . );
         if (ipParts.length == 4) {
           baseIp = "${ipParts[0]}.${ipParts[1]}.${ipParts[2]}";
         }
       }
     } catch (_) {}
 
-    // قائمة بأشهر المنافذ (Ports) العالمية المستخدمة أوتوماتيكيًا في أنظمة DLNA, UPnP, Chromecast, Smart TVs
-    final List<int> portsToScan =;
-    List<Future> scanTasks = [];
+    final List<Future> scanTasks = [];
 
-    // إطلاق عملية فحص أوتوماتيكية مكثفة لجميع أجهزة الشبكة (1-254) عِبر كافة المنافذ بالتوازي لسرعة فائقة
     for (int i = 1; i <= 254; i++) {
       final targetIp = "$baseIp.$i";
-      for (var port in portsToScan) {
-        scanTasks.add(_autoDiscoverDeviceDetails(targetIp, port));
-      }
+      scanTasks.add(_autoDiscoverDeviceDetails(targetIp, 8080));
+      scanTasks.add(_autoDiscoverDeviceDetails(targetIp, 23232));
+      scanTasks.add(_autoDiscoverDeviceDetails(targetIp, 8008));
+      scanTasks.add(_autoDiscoverDeviceDetails(targetIp, 49152));
     }
 
     await Future.wait(scanTasks);
@@ -191,7 +179,7 @@ class _MainDashboardState extends State<MainDashboard> {
                 children: [
                   CircularProgressIndicator(color: Colors.amber),
                   SizedBox(width: 15),
-                  Text("جاري مسح الشبكة أوتوماتيكيًا..."),
+                  Text("جاري مسح الشبكة..."),
                 ],
               )
             : const Text("الأجهزة الحقيقية المكتشفة 📡"),
@@ -200,7 +188,7 @@ class _MainDashboardState extends State<MainDashboard> {
           child: _discoveredDevices.isEmpty 
               ? const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text("لم يتم العثور على أي شاشات أو أجهزة كاست متصلة بالشبكة حالياً.", textAlign: TextAlign.center),
+                  child: Text("لم يتم العثور على أي أجهزة كاست متصلة حالياً.", textAlign: TextAlign.center),
                 )
               : ListView.builder(
                   shrinkWrap: true,
@@ -212,16 +200,15 @@ class _MainDashboardState extends State<MainDashboard> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: ListTile(
                         leading: const Icon(Icons.connected_tv, color: Colors.amber, size: 30),
-                        title: Text(device['name']!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                        // إظهار عنوان الآي بي والبورت الحقيقي بشكل منظم ومقروء تحت الاسم مباشرة
-                        subtitle: Text("IP: ${device['ip']}   |   Port: ${device['port']}", style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                        title: Text(device[ name ]!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                        subtitle: Text("IP: ${device[ ip ]} | Port: ${device[ port ]}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                         onTap: () {
                           Navigator.pop(context);
                           if (_detectedVideos.isNotEmpty) {
-                            _castToReceiverDLNA(_detectedVideos.first, device['ip']!, device['port']!);
+                            _castToReceiverDLNA(_detectedVideos.first, device[ ip ]!, device[ port ]!);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('قم بتشغيل فيديو أولاً ليتم إرساله للشاشة')),
+                              const SnackBar(content: Text( قم بتشغيل فيديو أولاً ليتم إرساله للشاشة )),
                             );
                           }
                         },
@@ -236,9 +223,30 @@ class _MainDashboardState extends State<MainDashboard> {
 
   void _injectSmartMediaSniffer() async {
     if (_webViewController == null) return;
-    String cleanJs = "var origOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(method,url){if(url&&(url.includes('.mp4')||url.includes('.m3u8')||url.includes('.mpd')||url.includes('videoplayback'))){window.flutter_inappwebview.callHandler('mediaSnifferHandler',url);}return origOpen.apply(this,arguments);};function scanTags(){var vids=document.getElementsByTagName('video');for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',vids[i].src);var sources=vids[i].getElementsByTagName('source');for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',sources[j].src);}}}setInterval(scanTags,2000);scanTags();";
     try {
-      await _webViewController!.evaluateJavascript(source: cleanJs);
+      await _webViewController!.evaluateJavascript(source: """
+        (function() {
+          var origOpen = XMLHttpRequest.prototype.open;
+          XMLHttpRequest.prototype.open = function(method, url) {
+            if (url && (url.indexOf( .mp4 ) !== -1 || url.indexOf( .m3u8 ) !== -1 || url.indexOf( .mpd ) !== -1 || url.indexOf( videoplayback ) !== -1)) {
+              window.flutter_inappwebview.callHandler( mediaSnifferHandler , url);
+            }
+            return origOpen.apply(this, arguments);
+          };
+          function scanTags() {
+            var vids = document.getElementsByTagName( video );
+            for (var i = 0; i < vids.length; i++) {
+              if (vids[i].src) window.flutter_inappwebview.callHandler( mediaSnifferHandler , vids[i].src);
+              var sources = vids[i].getElementsByTagName( source );
+              for (var j = 0; j < sources.length; j++) {
+                if (sources[j].src) window.flutter_inappwebview.callHandler( mediaSnifferHandler , sources[j].src);
+              }
+            }
+          }
+          setInterval(scanTags, 2000);
+          scanTags();
+        })();
+      """);
     } catch (_) {}
   }
 
@@ -246,3 +254,24 @@ class _MainDashboardState extends State<MainDashboard> {
     return Column(
       children: [
         Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          color: const Color(0xFF1E293B),
+          child: TextField(
+            decoration: const InputDecoration(
+              hintText:  أدخل رابط أو ابحث... ,
+              prefixIcon: Icon(Icons.search),
+              border: InputBorder.none,
+            ),
+            onSubmitted: (value) {
+              String url = value;
+              if (!url.startsWith("http")) {
+                url = "https://google.com";
+              }
+              _webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+            },
+          ),
+        ),
+        Expanded(
+          child: InAppWebView(
+            initialUrlRequest: URLRequest(url: WebUri(_currentUrl)),
+            onWebViewCreated: (controller) {
