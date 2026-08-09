@@ -1,32 +1,13 @@
-buildscript {
-    ext.kotlin_version =  1.8.22 
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        // تحديث نظام أندرويد جرادل ليدعم حزم البناء الحديثة
-        classpath  com.android.tools.build:gradle:8.1.0 
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-rootProject.buildDir =  ../build 
+// إجبار المشروع وكل الحزم (بما فيها file_picker) على البناء باستخدام إصدار 36
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn( :app )
-}
-
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            project.android {
+                compileSdkVersion 36
+                
+                // تأمين توافق إصدارات أدوات البناء
+                buildToolsVersion "36.0.0"
+            }
+        }
+    }
 }
