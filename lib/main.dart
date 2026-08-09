@@ -54,7 +54,7 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 
   void _pickLocalFile() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.video);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.video);
     if (result != null && result.files.single.path != null) {
       _playVideoInternally(result.files.single.path!);
     }
