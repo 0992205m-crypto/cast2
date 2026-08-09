@@ -22,8 +22,8 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    # 3. تثبيت أحدث بيئة فلاتر مستقرة (Stable) متوفرة الآن
-    - name: Set up Flutter (Latest Stable)
+    # 3. تثبيت بيئة فلاتر المستقرة
+    - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
@@ -37,20 +37,27 @@ jobs:
         echo "Creating fresh, modern Android build environment..."
         flutter create --platforms=android .
 
-    # 5. التحديث الإجباري الشامل لكل مكتبات المشروع إلى أحدث إصدار متوفر
-    - name: Upgrade All Project Dependencies To Latest Versions
+    # 5. تحميل الحزم وإصلاح كود المكتبة التالفة برمجياً في الـ Cache
+    - name: Fetch Packages & Hotfix InAppWebView Code
       run: |
-        echo "Running full system cache clean..."
+        echo "Running full system clean..."
         flutter clean
         
-        echo "Upgrading all pubspec dependencies to the absolute latest major versions..."
-        # هذا الأمر يقوم بتحديث كل حزم تطبيقك القديمة وتعديلها تلقائياً لأحدث إصدار مستقر
-        flutter pub upgrade --major-versions
-        
-        echo "Verifying and downloading the upgraded dependencies..."
+        echo "Downloading packages..."
         flutter pub get
+        
+        echo "Injecting Hotfix directly into flutter_inappwebview_android source code..."
+        # هذا الأمر يبحث عن ملف build.gradle الخاص بالمكتبة التالفة ويقوم باستبدال السطر القديم بالحديث فوراً
+        TARGET_FILE="/home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview_android-1.1.3/android/build.gradle"
+        if [ -f "$TARGET_FILE" ]; then
+          sed -i 's/proguard-android.txt/proguard-android-optimize.txt/g' "$TARGET_FILE"
+          echo "Hotfix applied successfully to $TARGET_FILE!"
+        else
+          echo "Warning: Target file not found, looking in alternative paths..."
+          find /home/runner/.pub-cache/ -name "build.gradle" -exec sed -i 's/proguard-android.txt/proguard-android-optimize.txt/g' {} + || true
+        fi
 
-    # 6. بناء ملف الـ APK النهائي بنجاح تام وبأعلى توافقية
+    # 6. بناء ملف الـ APK النهائي بنجاح تام بعد الإصلاح الجراحي للكود
     - name: Build APK Release
       run: flutter build apk --release --no-tree-shake-icons
 
