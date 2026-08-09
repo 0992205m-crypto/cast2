@@ -1,98 +1,41 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    id "dev.flutter.flutter-gradle-plugin"
-}
-
-// Load keystore properties if android/key.properties exists
-def keystorePropertiesFile = rootProject.file('android/key.properties')
-def keystoreProperties = new Properties()
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-}
-
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.withReader('UTF-8') { reader ->
-        localProperties.load(reader)
-    }
-}
-
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '1'
-}
-
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0'
+    // قد تجد أسطر إضافية هنا مثل id "dev.flutter.flutter-gradle-plugin" اتركها كما هي
 }
 
 android {
-    // تم التحديث إلى 36 لحل مشكلة تعارض المكتبات ا��حديثة في جيت هوب
-    compileSdk 36
+    // تم التعديل هنا مباشرة إلى إصدار 36 لحل مشكلة التوافق
+    compileSdkVersion 36
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
-    }
-
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
+        jvmTarget = '11'
     }
 
     defaultConfig {
-        // ضع اسم حزمة تطبيقك هنا إذا كان مختلفاً
-        applicationId "com.example.cast2"
+        // اسم الحزمة الخاص بتطبيقك (اترك الخاص بك كما هو)
+        applicationId "com.example.cast2" 
         
-        // تم رفعه إلى 24 لضمان تشغيل التطبيقات والمكتبات الحديثة بدون كراش
-        minSdk 24
-        
-        // تم التحديث إلى 36 ليتوافق مع معايير متجر جوجل بلاي وجيت هوب
-        targetSdk 36
-        
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
-        
-        // تفعيل ميزة MultiDex لتفادي أخطاء كثرة المكتبات في نسخة الـ Release
-        multiDexEnabled true
-    }
-
-    signingConfigs {
-        release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile file(keystoreProperties['storeFile'])
-                storePassword keystoreProperties['storePassword']
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-            }
-        }
+        // جلب الإعدادات الافتراضية من فلاتر
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutter.versionCode
+        versionName flutter.versionName
     }
 
     buildTypes {
         release {
-            // Use release signing when available, otherwise fall back to debug (dev only)
-            if (keystorePropertiesFile.exists()) {
-                signingConfig signingConfigs.release
-            } else {
-                signingConfig signingConfigs.debug
-            }
-            minifyEnabled false
-            shrinkResources false
+            // إعدادات التوقيع الخاصة بتطبيقك
+            signingConfig signingConfigs.debug
         }
     }
 }
 
 flutter {
-    source rootProject.file('../')
-}
-
-dependencies {
-    // دعم حزم أندرويد المتعددة
-    implementation "androidx.multidex:multidex:2.0.1"
+    source '../..'
 }
