@@ -19,17 +19,17 @@ jobs:
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
-        distribution:  zulu 
-        java-version:  17 
+        distribution: zulu
+        java-version: 17
 
     # 3. تثبيت بيئة فلاتر المستقرة
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel:  stable 
+        channel: stable
 
-    # 4. تدمير المجلد القديم وبناء قالب أندرويد حديث مع رفع إصدار الـ SDK تلقائياً إلى 36
-    - name: Recreate Android Project Configuration & Fix SDKs
+    # 4. بناء قالب أندرويد حديث وحقن ملفات الإنترنت والأمان والبحث تلقائياً
+    - name: Recreate Android Project Configuration & Fix SDKs & Inject Network Permissions
       run: |
         echo "Deleting old android folder..."
         rm -rf android/
@@ -38,14 +38,59 @@ jobs:
         flutter create --platforms=android .
         
         echo "Modifying build.gradle to upgrade minSdkVersion to 24 and targetSdkVersion to 36..."
-        # تعديل القيم داخل ملف إعدادات التطبيق لفرض استخدام إصدار 36
         APP_GRADLE="android/app/build.gradle"
         if [ -f "$APP_GRADLE" ]; then
-          sed -i  s/minSdkVersion.*/minSdkVersion 24/g  "$APP_GRADLE"
-          sed -i  s/targetSdkVersion.*/targetSdkVersion 36/g  "$APP_GRADLE"
-          sed -i  s/flutter.minSdkVersion.*/24/g  "$APP_GRADLE"
-          sed -i  s/flutter.targetSdkVersion.*/36/g  "$APP_GRADLE"
+          sed -i 's/minSdkVersion.*/minSdkVersion 24/g' "$APP_GRADLE"
+          sed -i 's/targetSdkVersion.*/targetSdkVersion 36/g' "$APP_GRADLE"
+          sed -i 's/flutter.minSdkVersion.*/24/g' "$APP_GRADLE"
+          sed -i 's/flutter.targetSdkVersion.*/36/g' "$APP_GRADLE"
           echo "Android SDK versions updated successfully to targetSdkVersion 36!"
+        fi
+
+        echo "Injecting full network permissions and nearby devices permissions into AndroidManifest..."
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST" ]; then
+          # استخدام سطر استبدال يعتمد على الإضافة المباشرة لضمان عدم فشل المطابقة
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"\/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"\/>\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" \/>\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" \/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" \/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" \/>' "$MANIFEST"
+          
+          # استبدال مع وسم التطبيق بطريقة مرنة ومطورة تتجاوز مشكلة الاسماء المختلفة
+          sed -i 's/<application/& android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml\/network_security_config"/g' "$MANIFEST"
+          echo "Permissions and application flags injected successfully!"
+        fi
+
+        echo "Creating network_security_config.xml tool to unblock HTTP and HTTPS connections..."
+        mkdir -p android/app/src/main/res/xml
+        cat << 'EOF' > android/app/src/main/res/xml/network_security_config.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <network-security-config>
+            <base-config cleartextTrafficAllowed="true">
+                <trust-anchors>
+                    <certificates src="system" />
+                    <certificates src="user" />
+                </trust-anchors>
+            </base-config>
+        </network-security-config>
+        EOF
+        echo "Network Security Config created and deployed!"
+
+        echo "Injecting force compileSdk 36 trick into root build.gradle to eliminate plugin build crashes..."
+        ROOT_GRADLE="android/build.gradle"
+        if [ -f "$ROOT_GRADLE" ]; then
+          cat << 'EOF' >> "$ROOT_GRADLE"
+        subprojects {
+            afterEvaluate { project ->
+                if (project.hasProperty('android')) {
+                    project.android {
+                        compileSdk = 36
+                        if (project.android.hasProperty('compileSdkVersion')) {
+                            compileSdkVersion = 36
+                        }
+                    }
+                }
+            }
+        }
+        EOF
+          echo "Root build.gradle security inject complete!"
         fi
 
     # 5. تحميل الحزم وإصلاح كود مكتبة الـ WebView تلقائياً في الـ Cache
@@ -58,13 +103,7 @@ jobs:
         flutter pub get
         
         echo "Injecting Hotfix directly into flutter_inappwebview_android source code..."
-        TARGET_FILE="/home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview_android-1.1.3/android/build.gradle"
-        if [ -f "$TARGET_FILE" ]; then
-          sed -i  s/proguard-android.txt/proguard-android-optimize.txt/g  "$TARGET_FILE"
-          echo "Hotfix applied successfully!"
-        else
-          find /home/runner/.pub-cache/ -name "build.gradle" -exec sed -i  s/proguard-android.txt/proguard-android-optimize.txt/g  {} + || true
-        fi
+        find /home/runner/.pub-cache/ -name "build.gradle" -exec sed -i 's/proguard-android.txt/proguard-android-optimize.txt/g' {} + || true
 
     # 6. بناء ملف الـ APK النهائي بنجاح تام وبدون أي قيود
     - name: Build APK Release
@@ -76,4 +115,3 @@ jobs:
       with:
         name: release-apk
         path: build/app/outputs/flutter-apk/app-release.apk
-
