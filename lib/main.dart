@@ -221,11 +221,11 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
-  // تم ضغط الكود هنا بالكامل في سطر واحد نقي لمنع مشاكل الأسطر المتعددة في المترجم
   void _injectSmartMediaSniffer() async {
     if (_webViewController == null) return;
+    final String jsCode = 'var origOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(method,url){if(url&&(url.indexOf(".mp4")!==-1||url.indexOf(".m3u8")!==-1||url.indexOf(".mpd")!==-1||url.indexOf("videoplayback")!==-1)){window.flutter_inappwebview.callHandler("mediaSnifferHandler",url);}return origOpen.apply(this,arguments);};function scanTags(){var vids=document.getElementsByTagName("video");for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler("mediaSnifferHandler",vids[i].src);var sources=vids[i].getElementsByTagName("source");for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler("mediaSnifferHandler",sources[j].src);}}}setInterval(scanTags,2000);scanTags();';
     try {
-      await _webViewController!.evaluateJavascript(source: "var origOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(method,url){if(url&&(url.indexOf('.mp4')!==-1||url.indexOf('.m3u8')!==-1||url.indexOf('.mpd')!==-1||url.indexOf('videoplayback')!==-1)){window.flutter_inappwebview.callHandler('mediaSnifferHandler',url);}return origOpen.apply(this,arguments);};function scanTags(){var vids=document.getElementsByTagName('video');for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',vids[i].src);var sources=vids[i].getElementsByTagName('source');for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',sources[j].src);}}}setInterval(scanTags,2000);scanTags();");
+      await _webViewController!.evaluateJavascript(source: jsCode);
     } catch (_) {}
   }
 
@@ -258,3 +258,4 @@ class _MainDashboardState extends State<MainDashboard> {
               _webViewController!.addJavaScriptHandler(handlerName: 'mediaSnifferHandler', callback: (args) {
                 if (args.isNotEmpty) {
                   String rawUrl = args.first.toString();
+                  if (rawUrl.startsWith("http")) {
