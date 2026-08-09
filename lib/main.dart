@@ -20,7 +20,6 @@ class UltimateCastApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      // نقوم بتمرير رابط تجريبي للفيديو، يمكنك استبداله بالرابط المستخرج من المتصفح الخاص بك
       home: const CastScreen(
         videoUrlToCast: 'https://googleapis.com',
       ),
@@ -29,7 +28,7 @@ class UltimateCastApp extends StatelessWidget {
 }
 
 // ==========================================
-// 1. مصفوفة بيانات الأجهزة المكتشفة (DLNA Device Model)
+// 1. مصفوفة بيانات الأجهزة المكتشفة الحقيقية
 // ==========================================
 class DLNADevice {
   final String name;
@@ -51,7 +50,7 @@ class DLNADevice {
 }
 
 // ==========================================
-// 2. خدمة اكتشاف الأجهزة الحقيقية والبث (DLNA Service)
+// 2. خدمة اكتشاف الأجهزة الحقيقية والبث بالشبكة
 // ==========================================
 class DLNACastService {
   final StreamController<List<DLNADevice>> _devicesController = StreamController<List<DLNADevice>>.broadcast();
@@ -60,18 +59,16 @@ class DLNACastService {
 
   Stream<List<DLNADevice>> get devicesStream => _devicesController.stream;
 
-  /// بدء البحث الحقيقي عن أجهزة UPnP / DLNA في الشبكة المحلية
+  /// بدء البحث الحقيقي عن أجهزة UPnP / DLNA في الشبكة本地 عبر الـ UDP
   Future<void> startScanning() async {
     _discoveredDevices.clear();
     _devicesController.add([]);
 
     try {
-      // ربط المقبس على جميع الواجهات عبر بورت عشوائي متاح
       _udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
       _udpSocket!.broadcastEnabled = true;
       _udpSocket!.multicastLoopback = false;
 
-      // تجهيز حزمة M-SEARCH القياسية للـ DLNA
       final String mSearchQuery = 
           'M-SEARCH * HTTP/1.1\r\n'
           'HOST: 239.255.255.250:1900\r\n'
@@ -83,7 +80,6 @@ class DLNACastService {
       final List<int> dataToSend = utf8.encode(mSearchQuery);
       final InternetAddress multicastAddress = InternetAddress('239.255.255.250');
 
-      // الاستماع للردود القادمة من الأجهزة الحقيقية
       _udpSocket!.listen((RawSocketEvent event) {
         if (event == RawSocketEvent.read) {
           Datagram? packet = _udpSocket!.receive();
@@ -94,13 +90,11 @@ class DLNACastService {
         }
       });
 
-      // إرسال الطلب 3 مرات لضمان وصوله عبر الواي فاي
       for (int i = 0; i < 3; i++) {
         _udpSocket!.send(dataToSend, multicastAddress, 1900);
         await Future.delayed(const Duration(milliseconds: 300));
       }
 
-      // إيقاف البحث تلقائياً بعد 7 ثوانٍ لتوفير الشبكة
       Future.delayed(const Duration(seconds: 7), () => stopScanning());
 
     } catch (e) {
@@ -108,9 +102,9 @@ class DLNACastService {
     }
   }
 
-  /// معالجة الردود وقراءة البيانات الحقيقية
+  /// معالجة الردود المباشرة والتحقق من الـ Location الحقيقي للجهاز
   Future<void> _handleSearchResponse(String response, String deviceIp) async {
-    if (!response.contains('LOCATION:')) return;
+    if (!response.toUpperCase().contains('LOCATION:')) return;
 
     try {
       final lines = response.split('\r\n');
@@ -124,21 +118,19 @@ class DLNACastService {
 
       if (locationUrl.isEmpty) return;
 
-      // تجنب تكرار نفس الجهاز في القائمة
       if (_discoveredDevices.any((d) => d.locationUrl == locationUrl)) return;
 
       Uri uri = Uri.parse(locationUrl);
       int realPort = uri.port;
 
-      // جلب ملف الـ XML الخاص بالجهاز لقراءة اسمه الحقيقي
-      final httpResponse = await http.get(uri).timeout(const Duration(seconds: 3));
+      final httpResponse = await http.get(uri).timeout(const Duration(seconds: 4));
       if (httpResponse.statusCode == 200) {
         String xmlBody = httpResponse.body;
         String friendlyName = _extractFriendlyName(xmlBody);
         String controlUrl = _extractControlUrl(xmlBody, locationUrl);
 
         if (friendlyName.isEmpty) {
-          friendlyName = "ريسيفر ذكي ($deviceIp)";
+          friendlyName = "جهاز ريسيفر ذكي ($deviceIp)";
         }
 
         DLNADevice newDevice = DLNADevice(
@@ -153,7 +145,7 @@ class DLNACastService {
         _devicesController.add(List.from(_discoveredDevices));
       }
     } catch (e) {
-      debugPrint("خطأ أثناء جلب تفاصيل الجهاز $deviceIp: $e");
+      debugPrint("خطأ أثناء معالجة بيانات جهاز $deviceIp: $e");
     }
   }
 
@@ -162,38 +154,58 @@ class DLNACastService {
     _udpSocket = null;
   }
 
+  /// استخراج الاسم باستخدام Substring آمن
   String _extractFriendlyName(String xmlContent) {
     try {
-      if (xmlContent.contains('<friendlyName>')) {
-        return xmlContent.split('<friendlyName>')[1].split('</friendlyName>')[0];
-      }
-    } catch (_) {}
-    return '';
-  }
-
-  String _extractControlUrl(String xmlContent, String locationUrl) {
-    try {
-      if (xmlContent.contains('urn:schemas-upnp-org:service:AVTransport:1')) {
-        String serviceChunk = xmlContent.split('urn:schemas-upnp-org:service:AVTransport:1')[1];
-        String controlSubUrl = serviceChunk.split('<controlURL>')[1].split('</controlURL>')[0];
-        
-        Uri baseUri = Uri.parse(locationUrl);
-        if (controlSubUrl.startsWith('http')) {
-          return controlSubUrl;
-        } else {
-          return Uri(
-            scheme: baseUri.scheme,
-            host: baseUri.host,
-            port: baseUri.port,
-            path: controlSubUrl.startsWith('/') ? controlSubUrl : '/$controlSubUrl'
-          ).toString();
+      const startTag = '<friendlyName>';
+      const endTag = '</friendlyName>';
+      
+      int startIndex = xmlContent.indexOf(startTag);
+      if (startIndex != -1) {
+        int endIndex = xmlContent.indexOf(endTag, startIndex + startTag.length);
+        if (endIndex != -1) {
+          return xmlContent.substring(startIndex + startTag.length, endIndex).trim();
         }
       }
     } catch (_) {}
     return '';
   }
 
-  /// بث الفيديو الحقيقي إلى الريسيفر المُختار
+  /// استخراج الرابط بأمان تام وتفادي تداخل الأقواس وعلامات الاقتباس
+  String _extractControlUrl(String xmlContent, String locationUrl) {
+    try {
+      const serviceTag = 'urn:schemas-upnp-org:service:AVTransport:1';
+      const controlStartTag = '<controlURL>';
+      const controlEndTag = '</controlURL>';
+
+      int serviceIndex = xmlContent.indexOf(serviceTag);
+      if (serviceIndex != -1) {
+        int startIndex = xmlContent.indexOf(controlStartTag, serviceIndex);
+        if (startIndex != -1) {
+          int endIndex = xmlContent.indexOf(controlEndTag, startIndex + controlStartTag.length);
+          if (endIndex != -1) {
+            String controlSubUrl = xmlContent.substring(startIndex + controlStartTag.length, endIndex).trim();
+            
+            Uri baseUri = Uri.parse(locationUrl);
+            if (controlSubUrl.startsWith('http')) {
+              return controlSubUrl;
+            } else {
+              String path = controlSubUrl.startsWith('/') ? controlSubUrl : '/$controlSubUrl';
+              return Uri(
+                scheme: baseUri.scheme,
+                host: baseUri.host,
+                port: baseUri.port,
+                path: path,
+              ).toString();
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  /// بث رابط الفيديو الفعلي إلى مشغل الريسيفر باستخدام بروتوكول SOAP
   Future<bool> castVideo(DLNADevice device, String videoUrl) async {
     if (device.controlUrl.isEmpty) return false;
 
@@ -230,9 +242,9 @@ class DLNACastService {
           'SOAPACTION': soapActionSetUrl,
         },
         body: soapBodySetUrl,
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 6));
 
-      if (responseSet.statusCode == 200) {
+      if (responseSet.statusCode == 200 || responseSet.statusCode == 201) {
         var responsePlay = await http.post(
           Uri.parse(device.controlUrl),
           headers: {
@@ -240,12 +252,12 @@ class DLNACastService {
             'SOAPACTION': soapActionPlay,
           },
           body: soapBodyPlay,
-        ).timeout(const Duration(seconds: 5));
+        ).timeout(const Duration(seconds: 6));
 
-        return responsePlay.statusCode == 200;
+        return responsePlay.statusCode == 200 || responsePlay.statusCode == 201;
       }
     } catch (e) {
-      debugPrint("فشل إرسال البث للجهاز: $e");
+      debugPrint("فشل التخاطب مع جهاز الريسيفر عبر بروتوكول البث: $e");
     }
     return false;
   }
@@ -256,7 +268,7 @@ class DLNACastService {
 }
 
 // ==========================================
-// 3. واجهة مستخدم شاشة البث (Cast Screen UI)
+// 3. واجهة مستخدم شاشة البث الحقيقي (Cast Screen UI)
 // ==========================================
 class CastScreen extends StatefulWidget {
   final String videoUrlToCast;
@@ -303,16 +315,3 @@ class _CastScreenState extends State<CastScreen> {
           _isScanning
               ? const Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(color: Colors.blue, strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _uiScanDevices,
-                  tooltip: 'إعادة البحث عن أجهزة حقيقية',
-                )
-        ],
-      ),
