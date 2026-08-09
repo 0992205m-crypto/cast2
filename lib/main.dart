@@ -5,7 +5,6 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
-import 'dart:convert';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -92,32 +91,9 @@ class _MainDashboardState extends State<MainDashboard> {
       socket.destroy();
 
       String deviceName = "جهاز ذكي مجهول";
-      
-      try {
-        final pathsToTry = ['/ssdp/device-desc.xml', '/description.xml', '/device.xml', '/setup/xml'];
-        for (var path in pathsToTry) {
-          final response = await http.get(Uri.parse('http://$ip:$port$path')).timeout(const Duration(milliseconds: 400));
-          if (response.statusCode == 200 && response.body.contains('<friendlyName>')) {
-            final match = RegExp(r'<friendlyName>(.*?)</friendlyName>').firstMatch(response.body);
-            if (match != null && match.group(1) != null) {
-              deviceName = match.group(1)!;
-              break;
-            }
-          }
-        }
-        
-        if (deviceName == "جهاز ذكي مجهول" && port == 8008) {
-          final response = await http.get(Uri.parse('http://$ip:$port/setup/eureka_info')).timeout(const Duration(milliseconds: 400));
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body);
-            if (data['name'] != null) deviceName = data['name'];
-          }
-        }
-      } catch (_) {
-        if (port == 23232) deviceName = "ريسيفر DLNA القياسي";
-        if (port == 8008) deviceName = "جهاز Chromecast / Android TV";
-        if (port == 8080 || port == 49152) deviceName = "شاشة ذكية UPnP";
-      }
+      if (port == 23232) deviceName = "ريسيفر DLNA القياسي";
+      if (port == 8008) deviceName = "جهاز Chromecast / Android TV";
+      if (port == 8080 || port == 49152) deviceName = "شاشة ذكية UPnP";
 
       if (mounted) {
         setState(() {
@@ -145,9 +121,10 @@ class _MainDashboardState extends State<MainDashboard> {
     try {
       final interfaces = await NetworkInterface.list(includeLoopback: false, type: InternetAddressType.IPv4);
       if (interfaces.isNotEmpty && interfaces.first.addresses.isNotEmpty) {
-        final ipParts = interfaces.first.addresses.first.address.split('.');
+        final ipStr = interfaces.first.addresses.first.address;
+        final ipParts = ipStr.split('.');
         if (ipParts.length == 4) {
-          baseIp = "${ipParts[0]}.${ipParts[1]}.${ipParts[2]}";
+          baseIp = ipParts[0] + '.' + ipParts[1] + '.' + ipParts[2];
         }
       }
     } catch (_) {}
@@ -200,8 +177,8 @@ class _MainDashboardState extends State<MainDashboard> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: ListTile(
                         leading: const Icon(Icons.connected_tv, color: Colors.amber, size: 30),
-                        title: Text(device['name']!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                        subtitle: Text("IP: ${device['ip']} | Port: ${device['port']}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        title: Text(device['name']!),
+                        subtitle: Text("IP: " + device['ip']! + " | Port: " + device['port']!),
                         onTap: () {
                           Navigator.pop(context);
                           if (_detectedVideos.isNotEmpty) {
@@ -223,7 +200,7 @@ class _MainDashboardState extends State<MainDashboard> {
 
   void _injectSmartMediaSniffer() async {
     if (_webViewController == null) return;
-    final String jsCode = 'var origOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(method,url){if(url&&(url.indexOf(".mp4")!==-1||url.indexOf(".m3u8")!==-1||url.indexOf(".mpd")!==-1||url.indexOf("videoplayback")!==-1)){window.flutter_inappwebview.callHandler("mediaSnifferHandler",url);}return origOpen.apply(this,arguments);};function scanTags(){var vids=document.getElementsByTagName("video");for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler("mediaSnifferHandler",vids[i].src);var sources=vids[i].getElementsByTagName("source");for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler("mediaSnifferHandler",sources[j].src);}}}setInterval(scanTags,2000);scanTags();';
+    final String jsCode = "var origOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(method,url){if(url&&(url.indexOf('.mp4')!==-1||url.indexOf('.m3u8')!==-1||url.indexOf('.mpd')!==-1||url.indexOf('videoplayback')!==-1)){window.flutter_inappwebview.callHandler('mediaSnifferHandler',url);}return origOpen.apply(this,arguments);};function scanTags(){var vids=document.getElementsByTagName('video');for(var i=0;i<vids.length;i++){if(vids[i].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',vids[i].src);var sources=vids[i].getElementsByTagName('source');for(var j=0;j<sources.length;j++){if(sources[j].src)window.flutter_inappwebview.callHandler('mediaSnifferHandler',sources[j].src);}}}setInterval(scanTags,2000);scanTags();";
     try {
       await _webViewController!.evaluateJavascript(source: jsCode);
     } catch (_) {}
@@ -259,3 +236,38 @@ class _MainDashboardState extends State<MainDashboard> {
                 if (args.isNotEmpty) {
                   String rawUrl = args.first.toString();
                   if (rawUrl.startsWith("http")) {
+                    setState(() {
+                      _detectedVideos.add(rawUrl);
+                    });
+                  }
+                }
+              });
+            },
+            onLoadStop: (controller, url) async {
+              setState(() { _currentUrl = url.toString(); });
+              _injectSmartMediaSniffer();
+            },
+            onUpdateVisitedHistory: (controller, url, isReload) {
+              _injectSmartMediaSniffer();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVideosListTab() {
+    if (_detectedVideos.isEmpty) {
+      return const Center(child: Text('قم بتشغيل أي فيديو في المتصفح وسيظهر هنا.'));
+    }
+    final list = _detectedVideos.toList();
+    return ListView.builder(
+      itemCount: list.length,
+      itemBuilder: (context, index) {
+        return Card(
+          margin: const EdgeInsets.all(8),
+          color: const Color(0xFF1E293B),
+          child: ListTile(
+            leading: const Icon(Icons.video_file, color: Colors.amber),
+            title: Text('فيديو مكتشف رقم ${index + 1}'),
+            subtitle: Text(list[index], maxLines: 1, overflow: TextOverflow.ellipsis),
