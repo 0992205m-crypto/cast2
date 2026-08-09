@@ -42,10 +42,10 @@ jobs:
         APP_GRADLE="android/app/build.gradle"
         if [ -f "$APP_GRADLE" ]; then
           sed -i  s/minSdkVersion.*/minSdkVersion 24/g  "$APP_GRADLE"
-          sed -i  s/targetSdkVersion.*/targetSdkVersion 35/g  "$APP_GRADLE"
+          sed -i  s/targetSdkVersion.*/targetSdkVersion 36/g  "$APP_GRADLE"
           sed -i  s/flutter.minSdkVersion.*/24/g  "$APP_GRADLE"
           sed -i  s/flutter.targetSdkVersion.*/36/g  "$APP_GRADLE"
-          echo "Android SDK versions updated successfully to targetSdkVersion 35!"
+          echo "Android SDK versions updated successfully to targetSdkVersion 36!"
         fi
 
     # 5. تحميل الحزم وإصلاح كود مكتبة الـ WebView تلقائياً في الـ Cache
