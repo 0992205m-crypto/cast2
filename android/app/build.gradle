@@ -30,8 +30,8 @@ if (flutterVersionName == null) {
 }
 
 android {
-    // تم التحديث إلى 34 لحل مشكلة تعارض المكتبات ا��حديثة في جيت هوب
-    compileSdk 34
+    // تم التحديث إلى 36 لحل مشكلة تعارض المكتبات ا��حديثة في جيت هوب
+    compileSdk 36
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -48,13 +48,13 @@ android {
 
     defaultConfig {
         // ضع اسم حزمة تطبيقك هنا إذا كان مختلفاً
-        applicationId "com.example.myapp"
+        applicationId "com.example.cast2"
         
         // تم رفعه إلى 23 لضمان تشغيل التطبيقات والمكتبات الحديثة بدون كراش
-        minSdk 23
+        minSdk 24
         
         // تم التحديث إلى 34 ليتوافق مع معايير متجر جوجل بلاي وجيت هوب
-        targetSdk 34
+        targetSdk 36
         
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
