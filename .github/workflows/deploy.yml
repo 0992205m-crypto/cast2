@@ -2,7 +2,7 @@ name: Flutter Build and Deploy APK
 
 on:
   push:
-    branches: [ "main", "master" ] # سيبدأ البناء تلقائياً عند التعديل على فرع main أو master
+    branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
 
@@ -11,36 +11,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. جلب الكود من المستودع
+    # 1. جلب كود المشروع من مستودع جيتهاب
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # 2. تثبيت جافا (الإصدار المتوافق مع فلاتر الحديث)
+    # 2. إعداد جافا 17 المتوافقة مع فلاتر الحديثة
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
 
-    # 3. تثبيت بيئة فلاتر المستقرة
+    # 3. إعداد بيئة فلاتر المستقرة (Stable)
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
 
-    # 4. حل مشكلة الـ v1 embedding (تحديث وحذف الملفات المتعارضة تلقائياً)
-    - name: Fix Android v1 Embedding Blocker
+    # 4. معالجة وتحديث نظام أندرويد ليدعم v2 Embedding بالكامل وتفادي الخطأ
+    - name: Force Fix Android V2 Embedding
       run: |
-        echo "Updating Android configuration to V2 Embedding..."
-        flutter pub get
-        # أمر لتنظيف الكاش القديم المتسبب في تعليق البناء
+        echo "Starting clean process..."
         flutter clean
+        
+        echo "Updating AndroidManifest to enforce V2 Embedding..."
+        # التأكد من كتابة وسم flutterEmbedding بقيمة 2 في ملف المانيفست الرئيسي لمنع انهيار البناء
+        if [ -f android/app/src/main/AndroidManifest.xml ]; then
+          sed -i '/<application/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
+        fi
+        
+        echo "Creating clean-room modern V2 MainActivity structure..."
+        # حذف أي بقايا قديمة متعارضة لملفات الماين اكتيفيتي
+        rm -rf android/app/src/main/java/com/example/* || true
+        rm -rf android/app/src/main/kotlin/com/example/* || true
+        
+        # بناء مسار مجلد نظيف لملف Kotlin الجديد
+        mkdir -p android/app/src/main/kotlin/com/example/yourapp
+        
+        # توليد ملف MainActivity المتوافق بالكامل مع V2 تلقائياً
+        cat << 'EOF' > android/app/src/main/kotlin/com/example/yourapp/MainActivity.kt
+        package com.example.yourapp
+        import io.flutter.embedding.android.FlutterActivity
+        class MainActivity: FlutterActivity() {
+        }
+        EOF
+        
+        echo "Fetching all packages..."
+        flutter pub get
 
-    # 5. بناء ملف الـ APK النهائي باستخدام خياراتك المفضلة
+    # 5. أمر بناء ملف الـ APK بالمحددات المطلوبة وبشكل كامل
     - name: Build APK Release
       run: flutter build apk --release --ignore-deprecation --no-tree-shake-icons --no-pub --no-track-widget-creation
 
-    # 6. رفع ملف الـ APK ليكون جاهزاً للتحميل من موقع جيتهاب مباشرة
+    # 6. رفع ملف الـ APK ليكون جاهزاً للتحميل مباشرة من صفحة جيتهاب
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
