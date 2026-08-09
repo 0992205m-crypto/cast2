@@ -28,20 +28,67 @@ jobs:
       with:
         channel: 'stable'
 
-    # 4. إصلاح نظام أندرويد لـ V2 بشكل نظيف وبدون تخريب للملفات
-    - name: Clean and Setup Environment
+    # 4. إعادة بناء ملفات الـ Android الأساسية بالكامل لإجبار السيرفر على استخدام V2
+    - name: Reconstruct Android Manifest and Main Activity to V2
       run: |
-        echo "Cleaning previous build cache..."
+        echo "Cleaning old cache..."
         flutter clean
+
+        echo "Overwriting AndroidManifest.xml with Clean V2 Code..."
+        # إعادة كتابة ملف المانيفست القياسي بالكامل لمنع أي تضارب مع الهيكلية القديمة
+        cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://android.com"
+            package="com.example.cast2">
+            <application
+                android:label="cast2"
+                android:name="${applicationName}"
+                android:icon="@mipmap/ic_launcher">
+                <activity
+                    android:name=".MainActivity"
+                    android:exported="true"
+                    android:launchMode="singleTop"
+                    android:taskAffinity=""
+                    android:theme="@style/LaunchTheme"
+                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                    android:hardwareAccelerated="true"
+                    android:windowSoftInputMode="adjustResize">
+                    <meta-data
+                      android:name="io.flutter.embedding.android.NormalTheme"
+                      android:resource="@style/NormalTheme" />
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/>
+                        <category android:name="android.intent.category.LAUNCHER"/>
+                    </intent-filter>
+                </activity>
+                <meta-data
+                    android:name="flutterEmbedding"
+                    android:value="2" />
+            </application>
+        </manifest>
+        EOF
+
+        echo "Overwriting MainActivity with Clean V2 Kotlin Code..."
+        # التأكد من إزالة أي مجلدات أو ملفات قديمة مسببة للمشكلة
+        rm -rf android/app/src/main/java/com/example/* || true
+        rm -rf android/app/src/main/kotlin/com/example/* || true
         
+        # إنشاء مسار نظيف وتوليد ملف MainActivity الحديث المتوافق 100% مع V2
+        mkdir -p android/app/src/main/kotlin/com/example/cast2
+        cat << 'EOF' > android/app/src/main/kotlin/com/example/cast2/MainActivity.kt
+        package com.example.cast2
+        import io.flutter.embedding.android.FlutterActivity
+        class MainActivity: FlutterActivity() {
+        }
+        EOF
+
         echo "Fetching modern dependencies..."
         flutter pub get
 
-    # 5. بناء ملف الـ APK (تم إزالة خيار --no-pub لضمان معالجة المكتبات تلقائياً)
+    # 5. بناء ملف الـ APK النهائي بنجاح
     - name: Build APK Release
       run: flutter build apk --release --ignore-deprecation --no-tree-shake-icons --no-track-widget-creation
 
-    # 6. رفع ملف الـ APK النهائي للتحميل
+    # 6. رفع ملف الـ APK النهائي ليكون جاهزاً للتحميل من صفحة جيتهاب
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
