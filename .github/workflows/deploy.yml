@@ -19,16 +19,16 @@ jobs:
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'zulu'
-        java-version: '17'
+        distribution:  zulu 
+        java-version:  17 
 
     # 3. تثبيت بيئة فلاتر المستقرة
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel: 'stable'
+        channel:  stable 
 
-    # 4. تدمير المجلد القديم وبناء قالب أندرويد حديث مع رفع إصدار الـ SDK تلقائياً إلى 35
+    # 4. تدمير المجلد القديم وبناء قالب أندرويد حديث مع رفع إصدار الـ SDK تلقائياً إلى 36
     - name: Recreate Android Project Configuration & Fix SDKs
       run: |
         echo "Deleting old android folder..."
@@ -37,14 +37,14 @@ jobs:
         echo "Creating fresh, modern Android build environment..."
         flutter create --platforms=android .
         
-        echo "Modifying build.gradle to upgrade minSdkVersion to 24 and targetSdkVersion to 35..."
-        # تعديل القيم داخل ملف إعدادات التطبيق لفرض استخدام إصدار 35
+        echo "Modifying build.gradle to upgrade minSdkVersion to 24 and targetSdkVersion to 36..."
+        # تعديل القيم داخل ملف إعدادات التطبيق لفرض استخدام إصدار 36
         APP_GRADLE="android/app/build.gradle"
         if [ -f "$APP_GRADLE" ]; then
-          sed -i 's/minSdkVersion.*/minSdkVersion 24/g' "$APP_GRADLE"
-          sed -i 's/targetSdkVersion.*/targetSdkVersion 35/g' "$APP_GRADLE"
-          sed -i 's/flutter.minSdkVersion.*/24/g' "$APP_GRADLE"
-          sed -i 's/flutter.targetSdkVersion.*/35/g' "$APP_GRADLE"
+          sed -i  s/minSdkVersion.*/minSdkVersion 24/g  "$APP_GRADLE"
+          sed -i  s/targetSdkVersion.*/targetSdkVersion 35/g  "$APP_GRADLE"
+          sed -i  s/flutter.minSdkVersion.*/24/g  "$APP_GRADLE"
+          sed -i  s/flutter.targetSdkVersion.*/36/g  "$APP_GRADLE"
           echo "Android SDK versions updated successfully to targetSdkVersion 35!"
         fi
 
@@ -60,10 +60,10 @@ jobs:
         echo "Injecting Hotfix directly into flutter_inappwebview_android source code..."
         TARGET_FILE="/home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview_android-1.1.3/android/build.gradle"
         if [ -f "$TARGET_FILE" ]; then
-          sed -i 's/proguard-android.txt/proguard-android-optimize.txt/g' "$TARGET_FILE"
+          sed -i  s/proguard-android.txt/proguard-android-optimize.txt/g  "$TARGET_FILE"
           echo "Hotfix applied successfully!"
         else
-          find /home/runner/.pub-cache/ -name "build.gradle" -exec sed -i 's/proguard-android.txt/proguard-android-optimize.txt/g' {} + || true
+          find /home/runner/.pub-cache/ -name "build.gradle" -exec sed -i  s/proguard-android.txt/proguard-android-optimize.txt/g  {} + || true
         fi
 
     # 6. بناء ملف الـ APK النهائي بنجاح تام وبدون أي قيود
