@@ -13,7 +13,7 @@ dependencies:
   video_player: ^2.9.2
   chewie: ^1.8.5
   http: ^1.2.2
-  file_picker: 10.3.8
+  file_picker: 10.3.8 # الإصدار المستقر الذي اعتمدناه بنجاح
 
 dev_dependencies:
   flutter_test:
