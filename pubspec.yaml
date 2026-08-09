@@ -13,7 +13,9 @@ dependencies:
   video_player: ^2.9.2
   chewie: ^1.8.5
   http: ^1.2.2
-  file_picker: ^8.1.7 # تم ترقية هذا الإصدار لحذف كود الـ v1 embedding المسبب للخطأ
+
+ # تم ترقية هذا الإصدار لحذف كود الـ v1 embedding المسبب للخطأfile_picker: ^11.0.2
+file_picker: ^11.0.2
 
 dev_dependencies:
   flutter_test:
